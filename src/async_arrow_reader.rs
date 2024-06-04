@@ -51,15 +51,15 @@ impl<R: Send> From<Cursor<R>> for StripeFactory<R> {
     }
 }
 
-struct StripeFactory<R> {
+pub struct StripeFactory<R> {
     inner: Cursor<R>,
     is_end: bool,
 }
 
 pub struct ArrowStreamReader<R: AsyncChunkReader> {
-    factory: Option<Box<StripeFactory<R>>>,
+    pub factory: Option<Box<StripeFactory<R>>>,
     batch_size: usize,
-    schema_ref: SchemaRef,
+    pub schema_ref: SchemaRef,
     state: StreamState<R>,
 }
 
@@ -78,7 +78,7 @@ impl<R: AsyncChunkReader + 'static> StripeFactory<R> {
         .await
     }
 
-    async fn read_next_stripe(mut self) -> Result<(Self, Option<Stripe>)> {
+    pub async fn read_next_stripe(mut self) -> Result<(Self, Option<Stripe>)> {
         let info = self
             .inner
             .file_metadata
