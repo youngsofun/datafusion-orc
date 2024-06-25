@@ -94,6 +94,7 @@ pub struct Stripe {
     stream_map: Arc<StreamMap>,
     number_of_rows: usize,
     tz: Option<chrono_tz::Tz>,
+    pub column_statistics: Vec<ColumnStatistics>,
 }
 
 impl Stripe {
@@ -113,7 +114,14 @@ impl Stripe {
         let columns = projected_data_type
             .children()
             .iter()
-            .map(|col| Column::new(col.name(), col.data_type(), &footer, info.number_of_rows()))
+            .map(|col| {
+                Column::new(
+                    col.name(),
+                    col.data_type(),
+                    &footer,
+                    info.column_statistics[col.data_type().column_index()].number_of_values(),
+                )
+            })
             .collect();
 
         let mut stream_map = HashMap::new();
@@ -144,6 +152,7 @@ impl Stripe {
             }),
             number_of_rows: info.number_of_rows() as usize,
             tz,
+            column_statistics: info.column_statistics.clone()
         })
     }
 
@@ -166,7 +175,14 @@ impl Stripe {
         let columns = projected_data_type
             .children()
             .iter()
-            .map(|col| Column::new(col.name(), col.data_type(), &footer, info.number_of_rows()))
+            .map(|col| {
+                Column::new(
+                    col.name(),
+                    col.data_type(),
+                    &footer,
+                    info.column_statistics[col.data_type().column_index()].number_of_values(),
+                )
+            })
             .collect();
 
         let mut stream_map = HashMap::new();
@@ -197,6 +213,7 @@ impl Stripe {
             }),
             number_of_rows: info.number_of_rows() as usize,
             tz,
+            column_statistics: info.column_statistics.clone(),
         })
     }
 

@@ -10,6 +10,7 @@ use crate::proto::{ColumnEncoding, StripeFooter};
 use crate::reader::decode::boolean_rle::BooleanIter;
 use crate::reader::ChunkReader;
 use crate::schema::DataType;
+use crate::statistics::ColumnStatistics;
 use crate::stripe::Stripe;
 
 #[derive(Debug)]
@@ -49,6 +50,10 @@ impl Column {
         }
     }
 
+    pub fn number_of_rows(&self) -> u64 {
+        self.number_of_rows
+    }
+
     pub fn dictionary_size(&self) -> usize {
         let column = self.data_type.column_index();
         self.footer.columns[column]
@@ -73,7 +78,7 @@ impl Column {
         self.data_type.column_index() as u32
     }
 
-    pub fn children(&self) -> Vec<Column> {
+    pub fn children(&self,  column_statistics: &[ColumnStatistics],) -> Vec<Column> {
         match &self.data_type {
             DataType::Boolean { .. }
             | DataType::Byte { .. }
@@ -93,7 +98,7 @@ impl Column {
             DataType::Struct { children, .. } => children
                 .iter()
                 .map(|col| Column {
-                    number_of_rows: self.number_of_rows,
+                    number_of_rows: column_statistics[col.data_type().column_index()].number_of_values(),
                     footer: self.footer.clone(),
                     name: col.name().to_string(),
                     data_type: col.data_type().clone(),
@@ -101,7 +106,7 @@ impl Column {
                 .collect(),
             DataType::List { child, .. } => {
                 vec![Column {
-                    number_of_rows: self.number_of_rows,
+                    number_of_rows: column_statistics[child.column_index()].number_of_values(),
                     footer: self.footer.clone(),
                     name: "item".to_string(),
                     data_type: *child.clone(),
@@ -110,13 +115,13 @@ impl Column {
             DataType::Map { key, value, .. } => {
                 vec![
                     Column {
-                        number_of_rows: self.number_of_rows,
+                        number_of_rows: column_statistics[key.column_index()].number_of_values(),
                         footer: self.footer.clone(),
                         name: "key".to_string(),
                         data_type: *key.clone(),
                     },
                     Column {
-                        number_of_rows: self.number_of_rows,
+                        number_of_rows:  column_statistics[value.column_index()].number_of_values(),
                         footer: self.footer.clone(),
                         name: "value".to_string(),
                         data_type: *value.clone(),
@@ -129,7 +134,7 @@ impl Column {
                     .iter()
                     .enumerate()
                     .map(|(index, data_type)| Column {
-                        number_of_rows: self.number_of_rows,
+                        number_of_rows:  column_statistics[data_type.column_index()].number_of_values(),
                         footer: self.footer.clone(),
                         name: format!("{index}"),
                         data_type: data_type.clone(),

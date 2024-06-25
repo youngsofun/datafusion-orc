@@ -27,7 +27,7 @@ impl ListArrayDecoder {
         let present = get_present_vec(column, stripe)?
             .map(|iter| Box::new(iter.into_iter()) as Box<dyn Iterator<Item = bool> + Send>);
 
-        let child = &column.children()[0];
+        let child = &column.children(&stripe.column_statistics)[0];
         let inner = array_decoder_factory(child, stripe)?;
 
         let reader = stripe.stream_map().get(column, Kind::Length);

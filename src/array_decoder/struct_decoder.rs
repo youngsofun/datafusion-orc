@@ -25,13 +25,13 @@ impl StructArrayDecoder {
             .map(|iter| Box::new(iter.into_iter()) as Box<dyn Iterator<Item = bool> + Send>);
 
         let decoders = column
-            .children()
+            .children(&stripe.column_statistics)
             .iter()
             .map(|child| array_decoder_factory(child, stripe))
             .collect::<Result<Vec<_>>>()?;
 
         let fields = column
-            .children()
+            .children(&stripe.column_statistics)
             .into_iter()
             .map(Field::from)
             .map(Arc::new)

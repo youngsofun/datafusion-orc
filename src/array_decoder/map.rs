@@ -27,10 +27,10 @@ impl MapArrayDecoder {
         let present = get_present_vec(column, stripe)?
             .map(|iter| Box::new(iter.into_iter()) as Box<dyn Iterator<Item = bool> + Send>);
 
-        let keys_column = &column.children()[0];
+        let keys_column = &column.children(&stripe.column_statistics)[0];
         let keys = array_decoder_factory(keys_column, stripe)?;
 
-        let values_column = &column.children()[1];
+        let values_column = &column.children(&stripe.column_statistics)[1];
         let values = array_decoder_factory(values_column, stripe)?;
 
         let reader = stripe.stream_map().get(column, Kind::Length);

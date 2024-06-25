@@ -33,13 +33,13 @@ impl UnionArrayDecoder {
         let tags = Box::new(ByteRleIter::new(tags));
 
         let variants = column
-            .children()
+            .children(&stripe.column_statistics)
             .iter()
             .map(|child| array_decoder_factory(child, stripe))
             .collect::<Result<Vec<_>>>()?;
 
         let fields = column
-            .children()
+            .children(&stripe.column_statistics)
             .into_iter()
             .enumerate()
             .map(|(idx, col)| {
