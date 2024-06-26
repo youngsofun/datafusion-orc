@@ -163,6 +163,11 @@ impl Stripe {
             .context(IoSnafu)?;
         let footer = Arc::new(deserialize_stripe_footer(footer, compression)?);
 
+        let stripe_data = reader
+            .get_bytes(info.offset(), info.data_length() + info.index_length())
+            .await
+            .context(IoSnafu)?;
+
         let columns = projected_data_type
             .children()
             .iter()
@@ -170,17 +175,20 @@ impl Stripe {
             .collect();
 
         let mut stream_map = HashMap::new();
-        let mut stream_offset = info.offset();
+        let mut stream_offset = 0;
         for stream in &footer.streams {
             let length = stream.length();
             let column_id = stream.column();
             let kind = stream.kind();
-            let data = Column::read_stream_async(reader, stream_offset, length).await?;
+            //let data = Column::read_stream_async(reader, stream_offset, length).await?;
+            let start = stream_offset;
+            let end = start + length as usize;
+            let data = stripe_data.slice(start..end);
 
             // TODO(weny): filter out unused streams.
             stream_map.insert((column_id, kind), data);
 
-            stream_offset += length;
+            stream_offset = end;
         }
 
         let tz: Option<chrono_tz::Tz> = footer
