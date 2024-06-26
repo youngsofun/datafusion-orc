@@ -157,16 +157,19 @@ impl Stripe {
     ) -> Result<Self> {
         let compression = file_metadata.compression();
 
-        let footer = reader
-            .get_bytes(info.footer_offset(), info.footer_length())
-            .await
-            .context(IoSnafu)?;
-        let footer = Arc::new(deserialize_stripe_footer(footer, compression)?);
-
         let stripe_data = reader
-            .get_bytes(info.offset(), info.data_length() + info.index_length())
+            .get_bytes(
+                info.offset(),
+                info.data_length() + info.index_length() + info.footer_length(),
+            )
             .await
             .context(IoSnafu)?;
+
+        let start = (info.footer_offset() - info.offset()) as usize;
+        let end = start + info.footer_length() as usize;
+
+        let footer = stripe_data.slice(start..end);
+        let footer = Arc::new(deserialize_stripe_footer(footer, compression)?);
 
         let columns = projected_data_type
             .children()
