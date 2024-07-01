@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use arrow::array::{ArrayRef, UnionArray};
 use arrow::buffer::Buffer;
-use arrow::datatypes::Field;
+use arrow::datatypes::{Field, UnionFields};
 use snafu::ResultExt;
 
 use crate::column::{get_present_vec, Column};
@@ -130,16 +130,10 @@ impl ArrayBatchDecoder for UnionArrayDecoder {
             .collect::<Result<Vec<_>>>()?;
 
         // Currently default to decoding as Sparse UnionArray so no value offsets
-        let field_type_ids = (0..self.variants.len() as i8).collect::<Vec<_>>();
-        let type_ids = Buffer::from_vec(tags);
-        let child_arrays = self
-            .fields
-            .clone()
-            .into_iter()
-            .zip(child_arrays)
-            .collect::<Vec<_>>();
-        let array = UnionArray::try_new(&field_type_ids, type_ids, None, child_arrays)
-            .context(ArrowSnafu)?;
+        let type_ids = Buffer::from_vec(tags.clone()).into();
+        let union_fields = UnionFields::new(0..self.variants.len() as i8, self.fields.clone());
+        let array =
+            UnionArray::try_new(union_fields, type_ids, None, child_arrays).context(ArrowSnafu)?;
         let array = Arc::new(array);
         Ok(array)
     }
